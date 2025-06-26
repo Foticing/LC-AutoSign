@@ -35,7 +35,7 @@ def sign_in(access_token):
         'X-JLC-AccessToken': access_token,
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Html5Plus/1.0 (Immersed/20) JlcMobileApp',
     }
-    token_tail = access_token[-4:]
+    token_tail = access_token[-4:]  # 仅用于错误处理
     
     try:
         # 1. 执行签到请求
@@ -43,17 +43,20 @@ def sign_in(access_token):
         sign_response.raise_for_status()
         sign_result = sign_response.json()
         
-        # 打印签到响应JSON
-        print(f"🔍 [账号{token_tail}] 签到响应JSON:")
-        print(json.dumps(sign_result, indent=2, ensure_ascii=False))
-        
         # 2. 获取金豆信息
         bean_response = requests.get(gold_bean_url, headers=headers)
         bean_response.raise_for_status()
         bean_result = bean_response.json()
         
+        # 获取customerCode
+        customer_code = bean_result['data']['customerCode']
+        
+        # 打印签到响应JSON
+        print(f"🔍 [账号{customer_code}] 签到响应JSON:")
+        print(json.dumps(sign_result, indent=2, ensure_ascii=False))
+        
         # 打印金豆响应JSON
-        print(f"🔍 [账号{token_tail}] 金豆响应JSON:")
+        print(f"🔍 [账号{customer_code}] 金豆响应JSON:")
         print(json.dumps(bean_result, indent=2, ensure_ascii=False))
         
         # 解析数据
@@ -65,7 +68,7 @@ def sign_in(access_token):
         # 处理签到结果 - 只有金豆不为0时才返回结果
         if status > 0:
             if gain_num is not None and gain_num != 0:
-                return f"✅ 账号(尾号{token_tail})：获取{gain_num}个金豆，当前总数：{integral_voucher}"
+                return f"✅ 账号({customer_code})：获取{gain_num}个金豆，当前总数：{integral_voucher}"
             else:
                 # 第七天特殊处理
                 seventh_response = requests.get(seventh_day_url, headers=headers)
@@ -73,19 +76,19 @@ def sign_in(access_token):
                 seventh_result = seventh_response.json()
                 
                 # 打印第七天响应JSON
-                print(f"🔍 [账号{token_tail}] 第七天签到响应JSON:")
+                print(f"🔍 [账号{customer_code}] 第七天签到响应JSON:")
                 print(json.dumps(seventh_result, indent=2, ensure_ascii=False))
                 
                 if seventh_result.get("success"):
-                    # 第七天获得8个金豆，肯定不为0，所以返回结果
-                    return f"🎉 账号(尾号{token_tail})：第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}"
+                    # 第七天获得8个金豆
+                    return f"🎉 账号({customer_code})：第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}"
                 else:
-                    # 第七天签到失败，金豆为0，不返回结果
-                    print(f"ℹ️ 账号(尾号{token_tail})：第七天签到失败，无金豆获取")
+                    # 第七天签到失败
+                    print(f"ℹ️ 账号({customer_code})：第七天签到失败，无金豆获取")
                     return None
         else:
-            # 签到失败，金豆为0，不返回结果
-            print(f"ℹ️ 账号(尾号{token_tail})：签到失败，无金豆获取")
+            # 签到失败
+            print(f"ℹ️ 账号({customer_code})：签到失败，无金豆获取")
             return None
 
     except RequestException as e:
@@ -114,8 +117,6 @@ def main():
     SendKeyList = SendKeyList[:min_length]
     
     print(f"🔧 共发现 {min_length} 个账号需要签到")
-    print(f"🔑 第一个账号尾号: {AccessTokenList[0][-4:]}...")
-    print(f"🔑 最后一个账号尾号: {AccessTokenList[-1][-4:]}...")
     
     # 按 SendKey 分组
     task_groups = defaultdict(list)
