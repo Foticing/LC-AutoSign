@@ -97,13 +97,13 @@ def sign_in(access_token):
             return None
 
     except RequestException as e:
-        print(f"❌ [账号{token_tail}] 网络请求失败: {str(e)}")
+        print(f"❌ [账号{mask_account(customer_code)}] 网络请求失败: {str(e)}")
         return None
     except KeyError as e:
-        print(f"❌ [账号{token_tail}] 数据解析失败: 缺少键 {str(e)}")
+        print(f"❌ [账号{mask_account(customer_code)}] 数据解析失败: 缺少键 {str(e)}")
         return None
     except Exception as e:
-        print(f"❌ [账号{token_tail}] 未知错误: {str(e)}")
+        print(f"❌ [账号{mask_account(customer_code)}] 未知错误: {str(e)}")
         return None
 
 # 主函数
