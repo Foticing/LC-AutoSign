@@ -16,6 +16,11 @@ url = 'https://m.jlc.com/api/activity/sign/signIn?source=3'
 gold_bean_url = "https://m.jlc.com/api/appPlatform/center/assets/selectPersonalAssetsInfo"
 seventh_day_url = "https://m.jlc.com/api/activity/sign/receiveVoucher"
 
+def mask_account(account):
+    if len(account) >= 4:
+        return account[:2] + '****' + account[-2:]
+    return '****'  # 长度不足时返回全隐藏
+
 # 推送通知函数
 def send_msg_by_server(send_key, title, content):
     push_url = f'https://sctapi.ftqq.com/{send_key}.send'
@@ -52,11 +57,11 @@ def sign_in(access_token):
         customer_code = bean_result['data']['customerCode']
         
         # 打印签到响应JSON
-        print(f"🔍 [账号{customer_code}] 签到响应JSON:")
+        print(f"🔍 [账号{mask_account(customer_code)}] 签到响应JSON:")
         print(json.dumps(sign_result, indent=2, ensure_ascii=False))
         
         # 打印金豆响应JSON
-        print(f"🔍 [账号{customer_code}] 金豆响应JSON:")
+        print(f"🔍 [账号{mask_account(customer_code)}] 金豆响应JSON:")
         print(json.dumps(bean_result, indent=2, ensure_ascii=False))
         
         # 解析数据
@@ -68,7 +73,7 @@ def sign_in(access_token):
         # 处理签到结果 - 只有金豆不为0时才返回结果
         if status > 0:
             if gain_num is not None and gain_num != 0:
-                return f"✅ 账号({customer_code})：获取{gain_num}个金豆，当前总数：{integral_voucher}"
+                return f"✅ 账号({mask_account(customer_code)})：获取{gain_num}个金豆，当前总数：{integral_voucher}"
             else:
                 # 第七天特殊处理
                 seventh_response = requests.get(seventh_day_url, headers=headers)
@@ -76,19 +81,19 @@ def sign_in(access_token):
                 seventh_result = seventh_response.json()
                 
                 # 打印第七天响应JSON
-                print(f"🔍 [账号{customer_code}] 第七天签到响应JSON:")
+                print(f"🔍 [账号{mask_account(customer_code)}] 第七天签到响应JSON:")
                 print(json.dumps(seventh_result, indent=2, ensure_ascii=False))
                 
                 if seventh_result.get("success"):
                     # 第七天获得8个金豆
-                    return f"🎉 账号({customer_code})：第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}"
+                    return f"🎉 账号({mask_account(customer_code)})：第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}"
                 else:
                     # 第七天签到失败
-                    print(f"ℹ️ 账号({customer_code})：第七天签到失败，无金豆获取")
+                    print(f"ℹ️ 账号({mask_account(customer_code)})：第七天签到失败，无金豆获取")
                     return None
         else:
             # 签到失败
-            print(f"ℹ️ 账号({customer_code})：签到失败，无金豆获取")
+            print(f"ℹ️ 账号({mask_account(customer_code)})：签到失败，无金豆获取")
             return None
 
     except RequestException as e:
