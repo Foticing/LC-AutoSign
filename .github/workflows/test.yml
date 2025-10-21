@@ -16,6 +16,6 @@ jobs:
         uses: Mattraks/delete-workflow-runs@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: '***/***'
+          repository: 'Foticing/LC-AutoSign'
           retain_days: 1
           keep_minimum_runs: 3
