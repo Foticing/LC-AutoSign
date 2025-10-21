@@ -26,18 +26,20 @@ def mask_account(account):
     return '****'
 
 
-def mask_json_customer_code(data):
-    """递归地脱敏 JSON 中的 customerCode 字段"""
+def mask_json_sensitive_fields(data):
+    """递归地脱敏 JSON 中的敏感字段 (customerCode, integralVoucher)"""
     if isinstance(data, dict):
         new_data = {}
         for k, v in data.items():
             if k == "customerCode" and isinstance(v, str):
                 new_data[k] = v[:1] + "xxxxx" + v[-2:]  # 例: 1xxxxx8A
+            elif k == "integralVoucher":  # 金豆数量
+                new_data[k] = "****"
             else:
-                new_data[k] = mask_json_customer_code(v)
+                new_data[k] = mask_json_sensitive_fields(v)
         return new_data
     elif isinstance(data, list):
-        return [mask_json_customer_code(i) for i in data]
+        return [mask_json_sensitive_fields(i) for i in data]
     else:
         return data
 
@@ -46,10 +48,7 @@ def mask_json_customer_code(data):
 
 def send_msg_by_server(send_key, title, content):
     push_url = f'https://sctapi.ftqq.com/{send_key}.send'
-    data = {
-        'text': title,
-        'desp': content
-    }
+    data = {'text': title, 'desp': content}
     try:
         response = requests.post(push_url, data=data)
         return response.json()
@@ -62,8 +61,10 @@ def send_msg_by_server(send_key, title, content):
 def sign_in(access_token):
     headers = {
         'X-JLC-AccessToken': access_token,
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) '
-                      'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Html5Plus/1.0 (Immersed/20) JlcMobileApp',
+        'User-Agent': (
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) '
+            'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Html5Plus/1.0 (Immersed/20) JlcMobileApp'
+        ),
     }
 
     try:
@@ -82,11 +83,11 @@ def sign_in(access_token):
 
         # 打印签到响应 JSON（已脱敏）
         print(f"🔍 [账号{mask_account(customer_code)}] 签到响应JSON:")
-        print(json.dumps(mask_json_customer_code(sign_result), indent=2, ensure_ascii=False))
+        print(json.dumps(mask_json_sensitive_fields(sign_result), indent=2, ensure_ascii=False))
 
         # 打印金豆响应 JSON（已脱敏）
         print(f"🔍 [账号{mask_account(customer_code)}] 金豆响应JSON:")
-        print(json.dumps(mask_json_customer_code(bean_result), indent=2, ensure_ascii=False))
+        print(json.dumps(mask_json_sensitive_fields(bean_result), indent=2, ensure_ascii=False))
 
         # 解析数据
         data = sign_result.get('data', {})
@@ -97,8 +98,8 @@ def sign_in(access_token):
         # 处理签到结果
         if status > 0:
             if gain_num is not None and gain_num != 0:
-                print(f"🎯 [账号{mask_account(customer_code)}] 今日签到完成，当前金豆：{integral_voucher}")
-                return f"✅ 账号({mask_account(customer_code)})：获取{gain_num}个金豆，当前总数：{integral_voucher}"
+                print(f"🎯 [账号{mask_account(customer_code)}] 今日签到完成，金豆+{gain_num}")
+                return f"✅ 账号({mask_account(customer_code)})：获取{gain_num}个金豆"
             else:
                 # 第七天特殊处理
                 seventh_response = requests.get(seventh_day_url, headers=headers)
@@ -107,11 +108,11 @@ def sign_in(access_token):
 
                 # 打印第七天响应 JSON（已脱敏）
                 print(f"🔍 [账号{mask_account(customer_code)}] 第七天签到响应JSON:")
-                print(json.dumps(mask_json_customer_code(seventh_result), indent=2, ensure_ascii=False))
+                print(json.dumps(mask_json_sensitive_fields(seventh_result), indent=2, ensure_ascii=False))
 
                 if seventh_result.get("success"):
                     print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功，领取8个金豆")
-                    return f"🎉 账号({mask_account(customer_code)})：第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}"
+                    return f"🎉 账号({mask_account(customer_code)})：第七天签到成功，领取8个金豆"
                 else:
                     print(f"ℹ️ [账号{mask_account(customer_code)}] 第七天签到失败，无金豆获取")
                     return None
