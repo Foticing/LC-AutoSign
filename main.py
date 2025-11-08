@@ -170,7 +170,7 @@ def main():
         print("\n📬 开始发送通知...")
         for send_key, results in group_results.items():
             if not results:
-                # print(f"⏭️ SendKey: {send_key[:5]}... 组内无金豆获取，跳过通知")
+                print(f"⏭️ SendKey: {send_key[:5]}... 组内无金豆获取，跳过通知")
                 continue
 
             content = "\n\n".join(results)
