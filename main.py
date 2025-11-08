@@ -106,14 +106,14 @@ def sign_in(access_token):
                 seventh_result = seventh_response.json()
 
                 # 打印第七天响应 JSON（已脱敏）
-                print(f"🔍 [账号{mask_account(customer_code)}] 第七天签到响应JSON:")
+                # print(f"🔍 [账号{mask_account(customer_code)}] 第七天签到响应JSON:")
                 print(json.dumps(mask_json_customer_code(seventh_result), indent=2, ensure_ascii=False))
 
                 if seventh_result.get("success"):
                     print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功，领取8个金豆")
                     return f"🎉 账号({mask_account(customer_code)})：第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}"
                 else:
-                    # print(f"ℹ️ [账号{mask_account(customer_code)}] 第七天签到失败，无金豆获取")
+                    print(f"ℹ️ [账号{mask_account(customer_code)}] 第七天签到失败，无金豆获取")
                     return None
         else:
             print(f"ℹ️ [账号{mask_account(customer_code)}] 今日已签到或签到失败")
