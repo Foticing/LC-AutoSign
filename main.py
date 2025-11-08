@@ -71,43 +71,57 @@ def sign_in(access_token):
         sign_response = requests.get(url, headers=headers)
         sign_response.raise_for_status()
         sign_result = sign_response.json()
+        
+        # 验证签到响应
+        if not sign_result or not isinstance(sign_result, dict):
+            print(f"❌ 签到响应数据格式异常")
+            return None
 
         # 2. 获取金豆信息
         bean_response = requests.get(gold_bean_url, headers=headers)
         bean_response.raise_for_status()
         bean_result = bean_response.json()
+        
+        # 验证金豆响应
+        if not bean_result or not isinstance(bean_result, dict):
+            print(f"❌ 金豆响应数据格式异常")
+            return None
+            
+        if 'data' not in bean_result or not bean_result['data']:
+            print(f"❌ 金豆响应中缺少data字段")
+            return None
+            
+        # 获取 customerCode，添加默认值
+        customer_code = bean_result['data'].get('customerCode', '未知账号')
+        if customer_code == '未知账号':
+            print(f"❌ 无法获取用户账号信息")
 
-        # 获取 customerCode
-        customer_code = bean_result['data']['customerCode']
+        # 解析数据，添加更安全的访问方式
+        data = sign_result.get('data', {}) or {}
+        gain_num = data.get('gainNum') if data else None
+        status = data.get('status') if data else None
+        
+        # 验证必要字段是否存在
+        if gain_num is None or status is None:
+            print(f"❌ [账号{mask_account(customer_code)}] 签到响应缺少必要字段")
+            return None
 
-        # 打印签到响应 JSON（已脱敏）
-        #print(f"🔍 [账号{mask_account(customer_code)}] 签到响应JSON:")
-        #print(json.dumps(mask_json_customer_code(sign_result), indent=2, ensure_ascii=False))
-
-        # 打印金豆响应 JSON（已脱敏）
-        #print(f"🔍 [账号{mask_account(customer_code)}] 金豆响应JSON:")
-        #print(json.dumps(mask_json_customer_code(bean_result), indent=2, ensure_ascii=False))
-
-        # 解析数据
-        data = sign_result.get('data', {})
-        gain_num = data.get('gainNum')
-        status = data.get('status')
-        integral_voucher = bean_result['data']['integralVoucher']
+        integral_voucher = bean_result['data'].get('integralVoucher', 0)
 
         # 处理签到结果
         if status > 0:
             if gain_num is not None and gain_num != 0:
-                # print(f"🎯 [账号{mask_account(customer_code)}] 今日签到完成，当前金豆：{integral_voucher}")
                 return f"✅ 账号({mask_account(customer_code)})：获取{gain_num}个金豆，当前总数：{integral_voucher}"
             else:
                 # 第七天特殊处理
                 seventh_response = requests.get(seventh_day_url, headers=headers)
                 seventh_response.raise_for_status()
                 seventh_result = seventh_response.json()
-
-                # 打印第七天响应 JSON（已脱敏）
-                # print(f"🔍 [账号{mask_account(customer_code)}] 第七天签到响应JSON:")
-                print(json.dumps(mask_json_customer_code(seventh_result), indent=2, ensure_ascii=False))
+                
+                # 验证第七天响应
+                if not seventh_result or not isinstance(seventh_result, dict):
+                    print(f"❌ [账号{mask_account(customer_code)}] 第七天签到响应数据格式异常")
+                    return None
 
                 if seventh_result.get("success"):
                     print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功，领取8个金豆")
@@ -120,13 +134,13 @@ def sign_in(access_token):
             return None
 
     except RequestException as e:
-        print(f"❌ [账号{mask_account(customer_code)}] 网络请求失败: {str(e)}")
+        print(f"❌ [账号{mask_account(customer_code) if 'customer_code' in locals() else '未知账号'}] 网络请求失败: {str(e)}")
         return None
     except KeyError as e:
-        print(f"❌ [账号{mask_account(customer_code)}] 数据解析失败: 缺少键 {str(e)}")
+        print(f"❌ [账号{mask_account(customer_code) if 'customer_code' in locals() else '未知账号'}] 数据解析失败: 缺少键 {str(e)}")
         return None
     except Exception as e:
-        print(f"❌ [账号{mask_account(customer_code)}] 未知错误: {str(e)}")
+        print(f"❌ [账号{mask_account(customer_code) if 'customer_code' in locals() else '未知账号'}] 未知错误: {str(e)}")
         return None
 
 
