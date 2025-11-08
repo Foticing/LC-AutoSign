@@ -81,12 +81,12 @@ def sign_in(access_token):
         customer_code = bean_result['data']['customerCode']
 
         # 打印签到响应 JSON（已脱敏）
-        print(f"🔍 [账号{mask_account(customer_code)}] 签到响应JSON:")
-        print(json.dumps(mask_json_customer_code(sign_result), indent=2, ensure_ascii=False))
+        #print(f"🔍 [账号{mask_account(customer_code)}] 签到响应JSON:")
+        #print(json.dumps(mask_json_customer_code(sign_result), indent=2, ensure_ascii=False))
 
         # 打印金豆响应 JSON（已脱敏）
-        print(f"🔍 [账号{mask_account(customer_code)}] 金豆响应JSON:")
-        print(json.dumps(mask_json_customer_code(bean_result), indent=2, ensure_ascii=False))
+        #print(f"🔍 [账号{mask_account(customer_code)}] 金豆响应JSON:")
+        #print(json.dumps(mask_json_customer_code(bean_result), indent=2, ensure_ascii=False))
 
         # 解析数据
         data = sign_result.get('data', {})
@@ -97,7 +97,7 @@ def sign_in(access_token):
         # 处理签到结果
         if status > 0:
             if gain_num is not None and gain_num != 0:
-                print(f"🎯 [账号{mask_account(customer_code)}] 今日签到完成，当前金豆：{integral_voucher}")
+                # print(f"🎯 [账号{mask_account(customer_code)}] 今日签到完成，当前金豆：{integral_voucher}")
                 return f"✅ 账号({mask_account(customer_code)})：获取{gain_num}个金豆，当前总数：{integral_voucher}"
             else:
                 # 第七天特殊处理
@@ -113,7 +113,7 @@ def sign_in(access_token):
                     print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功，领取8个金豆")
                     return f"🎉 账号({mask_account(customer_code)})：第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}"
                 else:
-                    print(f"ℹ️ [账号{mask_account(customer_code)}] 第七天签到失败，无金豆获取")
+                    # print(f"ℹ️ [账号{mask_account(customer_code)}] 第七天签到失败，无金豆获取")
                     return None
         else:
             print(f"ℹ️ [账号{mask_account(customer_code)}] 今日已签到或签到失败")
@@ -170,12 +170,12 @@ def main():
         print("\n📬 开始发送通知...")
         for send_key, results in group_results.items():
             if not results:
-                print(f"⏭️ SendKey: {send_key[:5]}... 组内无金豆获取，跳过通知")
+                # print(f"⏭️ SendKey: {send_key[:5]}... 组内无金豆获取，跳过通知")
                 continue
 
             content = "\n\n".join(results)
             print(f"📤 准备发送通知给 SendKey: {send_key[:5]}...")
-            print(f"📝 通知内容预览:\n{content[:100]}...")
+            # print(f"📝 通知内容预览:\n{content[:100]}...")
 
             response = send_msg_by_server(send_key, "嘉立创签到汇总", content)
 
