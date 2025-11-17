@@ -81,7 +81,7 @@ def sign_in(access_token):
         customer_code = bean_result['data']['customerCode']
 
         # 打印签到响应 JSON（已脱敏）
-        #print(f"🔍 [账号{mask_account(customer_code)}] 签到响应JSON:")
+        print(f"🔍 [账号{mask_account(customer_code)}] 签到响应JSON:")
         #print(json.dumps(mask_json_customer_code(sign_result), indent=2, ensure_ascii=False))
 
         # 打印金豆响应 JSON（已脱敏）
@@ -106,8 +106,8 @@ def sign_in(access_token):
                 seventh_result = seventh_response.json()
 
                 # 打印第七天响应 JSON（已脱敏）
-                # print(f"🔍 [账号{mask_account(customer_code)}] 第七天签到响应JSON:")
-                print(json.dumps(mask_json_customer_code(seventh_result), indent=2, ensure_ascii=False))
+                print(f"🔍 [账号{mask_account(customer_code)}] 第七天签到响应JSON:")
+                # print(json.dumps(mask_json_customer_code(seventh_result), indent=2, ensure_ascii=False))
 
                 if seventh_result.get("success"):
                     print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功，领取8个金豆")
