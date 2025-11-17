@@ -8,12 +8,8 @@ import os
 from requests.exceptions import RequestException
 from collections import defaultdict
 
-# ======== 环境变量配置 ========
-# 从环境变量获取 token 和 send_key
-# 多个账号用逗号分隔，token 和 send_key 要一一对应
-
-TOKEN_LIST = os.getenv('JLC_TOKENS', '')  # 从环境变量 JLC_TOKENS 获取 token
-SEND_KEY_LIST = os.getenv('JLC_SEND_KEYS', '')  # 从环境变量 JLC_SEND_KEYS 获取 send_key
+TOKEN_LIST = os.getenv('TOKEN_LIST', '')
+SEND_KEY_LIST = os.getenv('SEND_KEY_LIST', '')
 
 # 接口配置
 url = 'https://m.jlc.com/api/activity/sign/signIn?source=3'
@@ -93,9 +89,11 @@ def sign_in(access_token):
         if not sign_result.get('success'):
             message = sign_result.get('message', '未知错误')
             if '已经签到' in message:
-                return f"ℹ️ 账号({mask_account(customer_code)})：今日已签到，当前金豆总数：{integral_voucher}"
+                print(f"ℹ️ [账号{mask_account(customer_code)}] 今日已签到，当前金豆总数：{integral_voucher}")
+                return None  # 今日已签到，不返回消息
             else:
-                return f"❌ 账号({mask_account(customer_code)})：签到失败 - {message}"
+                print(f"❌ [账号{mask_account(customer_code)}] 签到失败 - {message}")
+                return None  # 签到失败，不返回消息
 
         # 解析签到数据
         data = sign_result.get('data', {})
@@ -107,6 +105,7 @@ def sign_in(access_token):
         # 处理签到结果
         if status and status > 0:
             if gain_num is not None and gain_num != 0:
+                print(f"✅ [账号{mask_account(customer_code)}] 获取{gain_num}个金豆，当前总数：{integral_voucher + gain_num}")
                 return f"✅ 账号({mask_account(customer_code)})：获取{gain_num}个金豆，当前总数：{integral_voucher + gain_num}"
             else:
                 # 第七天特殊处理
@@ -115,7 +114,7 @@ def sign_in(access_token):
                 seventh_result = seventh_response.json()
 
                 if seventh_result.get("success"):
-                    print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功，领取8个金豆")
+                    print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}")
                     return f"🎉 账号({mask_account(customer_code)})：第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}"
                 else:
                     print(f"ℹ️ [账号{mask_account(customer_code)}] 第七天签到失败，无金豆获取")
@@ -138,17 +137,17 @@ def sign_in(access_token):
 # ======== 主函数 ========
 
 def main():
-    # 从环境变量获取配置
+    # 从 GitHub Secrets 获取配置
     AccessTokenList = [token.strip() for token in TOKEN_LIST.split(',') if token.strip()]
     SendKeyList = [key.strip() for key in SEND_KEY_LIST.split(',') if key.strip()]
 
     # 检查配置是否为空
     if not AccessTokenList:
-        print("❌ 请设置环境变量 JLC_TOKENS")
+        print("❌ 请在 GitHub Secrets 中设置 JLC_TOKENS")
         return
         
     if not SendKeyList:
-        print("❌ 请设置环境变量 JLC_SEND_KEYS")
+        print("❌ 请在 GitHub Secrets 中设置 JLC_SEND_KEYS")
         return
 
     # 确保长度一致
@@ -188,23 +187,28 @@ def main():
         
         group_results[send_key] = results
 
-    # 推送通知
-    print("\n📬 开始发送通知...")
+    # 推送通知 - 只在有获取到金豆时才发送
+    print("\n📬 开始检查是否需要发送通知...")
+    notification_sent = False
+    
     for send_key, results in group_results.items():
-        if not results:
-            print(f"⏭️ SendKey: {send_key[:5]}... 组内无金豆获取，跳过通知")
-            continue
-
-        content = "\n\n".join(results)
-        print(f"📤 准备发送通知给 SendKey: {send_key[:5]}...")
-
-        response = send_msg_by_server(send_key, "嘉立创签到汇总", content)
-
-        if response and response.get('code') == 0:
-            print(f"✅ 通知发送成功！消息ID: {response.get('data', {}).get('pushid', '')}")
+        if results:
+            content = "\n\n".join(results)
+            print(f"📤 检测到有金豆获取，准备发送通知给 SendKey: {send_key[:5]}...")
+            
+            response = send_msg_by_server(send_key, "嘉立创签到汇总", content)
+            
+            if response and response.get('code') == 0:
+                print(f"✅ 通知发送成功！消息ID: {response.get('data', {}).get('pushid', '')}")
+                notification_sent = True
+            else:
+                error_msg = response.get('message') if response else '未知错误'
+                print(f"❌ 通知发送失败！错误: {error_msg}")
         else:
-            error_msg = response.get('message') if response else '未知错误'
-            print(f"❌ 通知发送失败！错误: {error_msg}")
+            print(f"⏭️ SendKey: {send_key[:5]}... 组内无金豆获取，跳过通知")
+    
+    if not notification_sent:
+        print("ℹ️ 所有账号均未获取到金豆，无通知发送")
 
 
 # ======== 程序入口 ========
