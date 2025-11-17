@@ -3,8 +3,9 @@
 import requests
 import os
 import json
+import time
+import random
 from requests.exceptions import RequestException
-from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
 
 # 从 GitHub Secrets 获取配置
@@ -154,36 +155,47 @@ def main():
 
     print(f"📊 共分为 {len(task_groups)} 个通知组")
 
-    # 多线程处理签到任务
-    with ThreadPoolExecutor(max_workers=min_length) as executor:
-        group_results = {}
+    # 顺序执行签到任务
+    group_results = {}
 
-        for send_key, tokens in task_groups.items():
-            print(f"\n🚀 开始处理 SendKey: {send_key[:5]}... 的 {len(tokens)} 个账号")
-            futures = [executor.submit(sign_in, token) for token in tokens]
-            results = [f.result() for f in futures]
+    for send_key, tokens in task_groups.items():
+        print(f"\n🚀 开始处理 SendKey: {send_key[:5]}... 的 {len(tokens)} 个账号")
+        results = []
+        
+        for i, token in enumerate(tokens):
+            print(f"📝 处理第 {i+1}/{len(tokens)} 个账号...")
+            
+            # 执行签到
+            result = sign_in(token)
+            if result is not None:
+                results.append(result)
+            
+            # 如果不是最后一个账号，则等待随机时间
+            if i < len(tokens) - 1:
+                wait_time = random.randint(5, 15)
+                print(f"⏳ 等待 {wait_time} 秒后处理下一个账号...")
+                time.sleep(wait_time)
+        
+        group_results[send_key] = results
 
-            valid_results = [r for r in results if r is not None]
-            group_results[send_key] = valid_results
+    # 推送通知
+    print("\n📬 开始发送通知...")
+    for send_key, results in group_results.items():
+        if not results:
+            print(f"⏭️ SendKey: {send_key[:5]}... 组内无金豆获取，跳过通知")
+            continue
 
-        # 推送通知
-        print("\n📬 开始发送通知...")
-        for send_key, results in group_results.items():
-            if not results:
-                print(f"⏭️ SendKey: {send_key[:5]}... 组内无金豆获取，跳过通知")
-                continue
+        content = "\n\n".join(results)
+        print(f"📤 准备发送通知给 SendKey: {send_key[:5]}...")
+        # print(f"📝 通知内容预览:\n{content[:100]}...")
 
-            content = "\n\n".join(results)
-            print(f"📤 准备发送通知给 SendKey: {send_key[:5]}...")
-            # print(f"📝 通知内容预览:\n{content[:100]}...")
+        response = send_msg_by_server(send_key, "嘉立创签到汇总", content)
 
-            response = send_msg_by_server(send_key, "嘉立创签到汇总", content)
-
-            if response and response.get('code') == 0:
-                print(f"✅ 通知发送成功！消息ID: {response.get('data', {}).get('pushid', '')}")
-            else:
-                error_msg = response.get('message') if response else '未知错误'
-                print(f"❌ 通知发送失败！错误: {error_msg}")
+        if response and response.get('code') == 0:
+            print(f"✅ 通知发送成功！消息ID: {response.get('data', {}).get('pushid', '')}")
+        else:
+            error_msg = response.get('message') if response else '未知错误'
+            print(f"❌ 通知发送失败！错误: {error_msg}")
 
 
 # ======== 程序入口 ========
