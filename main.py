@@ -1,16 +1,19 @@
 # -*- coding: UTF-8 -*-
 
 import requests
-import os
 import json
 import time
 import random
+import os
 from requests.exceptions import RequestException
 from collections import defaultdict
 
-# 从 GitHub Secrets 获取配置
-TOKEN_LIST = os.getenv('TOKEN_LIST', '')
-SEND_KEY_LIST = os.getenv('SEND_KEY_LIST', '')
+# ======== 环境变量配置 ========
+# 从环境变量获取 token 和 send_key
+# 多个账号用逗号分隔，token 和 send_key 要一一对应
+
+TOKEN_LIST = os.getenv('JLC_TOKENS', '')  # 从环境变量 JLC_TOKENS 获取 token
+SEND_KEY_LIST = os.getenv('JLC_SEND_KEYS', '')  # 从环境变量 JLC_SEND_KEYS 获取 send_key
 
 # 接口配置
 url = 'https://m.jlc.com/api/activity/sign/signIn?source=3'
@@ -68,47 +71,48 @@ def sign_in(access_token):
     }
 
     try:
-        # 1. 执行签到请求
-        sign_response = requests.get(url, headers=headers)
-        sign_response.raise_for_status()
-        sign_result = sign_response.json()
-
-        # 2. 获取金豆信息
+        # 1. 获取金豆信息（先获取，用于获取 customer_code）
         bean_response = requests.get(gold_bean_url, headers=headers)
         bean_response.raise_for_status()
         bean_result = bean_response.json()
 
         # 获取 customerCode
         customer_code = bean_result['data']['customerCode']
-
-        # 打印签到响应 JSON（已脱敏）
-        print(f"🔍 [账号{mask_account(customer_code)}] 签到响应JSON:")
-        #print(json.dumps(mask_json_customer_code(sign_result), indent=2, ensure_ascii=False))
-
-        # 打印金豆响应 JSON（已脱敏）
-        #print(f"🔍 [账号{mask_account(customer_code)}] 金豆响应JSON:")
-        #print(json.dumps(mask_json_customer_code(bean_result), indent=2, ensure_ascii=False))
-
-        # 解析数据
-        data = sign_result.get('data', {})
-        gain_num = data.get('gainNum')
-        status = data.get('status')
         integral_voucher = bean_result['data']['integralVoucher']
 
+        # 2. 执行签到请求
+        sign_response = requests.get(url, headers=headers)
+        sign_response.raise_for_status()
+        sign_result = sign_response.json()
+
+        # 打印签到响应 JSON（已脱敏）
+        # print(f"🔍 [账号{mask_account(customer_code)}] 签到响应JSON:")
+        # print(json.dumps(mask_json_customer_code(sign_result), indent=2, ensure_ascii=False))
+
+        # 检查签到是否成功
+        if not sign_result.get('success'):
+            message = sign_result.get('message', '未知错误')
+            if '已经签到' in message:
+                return f"ℹ️ 账号({mask_account(customer_code)})：今日已签到，当前金豆总数：{integral_voucher}"
+            else:
+                return f"❌ 账号({mask_account(customer_code)})：签到失败 - {message}"
+
+        # 解析签到数据
+        data = sign_result.get('data', {})
+        
+        # 安全地获取 gainNum 和 status
+        gain_num = data.get('gainNum') if data else None
+        status = data.get('status') if data else None
+
         # 处理签到结果
-        if status > 0:
+        if status and status > 0:
             if gain_num is not None and gain_num != 0:
-                # print(f"🎯 [账号{mask_account(customer_code)}] 今日签到完成，当前金豆：{integral_voucher}")
-                return f"✅ 账号({mask_account(customer_code)})：获取{gain_num}个金豆，当前总数：{integral_voucher}"
+                return f"✅ 账号({mask_account(customer_code)})：获取{gain_num}个金豆，当前总数：{integral_voucher + gain_num}"
             else:
                 # 第七天特殊处理
                 seventh_response = requests.get(seventh_day_url, headers=headers)
                 seventh_response.raise_for_status()
                 seventh_result = seventh_response.json()
-
-                # 打印第七天响应 JSON（已脱敏）
-                print(f"🔍 [账号{mask_account(customer_code)}] 第七天签到响应JSON:")
-                # print(json.dumps(mask_json_customer_code(seventh_result), indent=2, ensure_ascii=False))
 
                 if seventh_result.get("success"):
                     print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功，领取8个金豆")
@@ -121,25 +125,31 @@ def sign_in(access_token):
             return None
 
     except RequestException as e:
-        print(f"❌ [账号{mask_account(customer_code)}] 网络请求失败: {str(e)}")
+        print(f"❌ [账号{mask_account(access_token)}] 网络请求失败: {str(e)}")
         return None
     except KeyError as e:
-        print(f"❌ [账号{mask_account(customer_code)}] 数据解析失败: 缺少键 {str(e)}")
+        print(f"❌ [账号{mask_account(access_token)}] 数据解析失败: 缺少键 {str(e)}")
         return None
     except Exception as e:
-        print(f"❌ [账号{mask_account(customer_code)}] 未知错误: {str(e)}")
+        print(f"❌ [账号{mask_account(access_token)}] 未知错误: {str(e)}")
         return None
 
 
 # ======== 主函数 ========
 
 def main():
-    if not TOKEN_LIST or not SEND_KEY_LIST:
-        print("❌ TOKEN_LIST 或 SEND_KEY_LIST 环境变量未设置")
-        return
+    # 从环境变量获取配置
+    AccessTokenList = [token.strip() for token in TOKEN_LIST.split(',') if token.strip()]
+    SendKeyList = [key.strip() for key in SEND_KEY_LIST.split(',') if key.strip()]
 
-    AccessTokenList = TOKEN_LIST.split(',')
-    SendKeyList = SEND_KEY_LIST.split(',')
+    # 检查配置是否为空
+    if not AccessTokenList:
+        print("❌ 请设置环境变量 JLC_TOKENS")
+        return
+        
+    if not SendKeyList:
+        print("❌ 请设置环境变量 JLC_SEND_KEYS")
+        return
 
     # 确保长度一致
     min_length = min(len(AccessTokenList), len(SendKeyList))
@@ -187,7 +197,6 @@ def main():
 
         content = "\n\n".join(results)
         print(f"📤 准备发送通知给 SendKey: {send_key[:5]}...")
-        # print(f"📝 通知内容预览:\n{content[:100]}...")
 
         response = send_msg_by_server(send_key, "嘉立创签到汇总", content)
 
