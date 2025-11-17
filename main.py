@@ -89,7 +89,7 @@ def sign_in(access_token):
         if not sign_result.get('success'):
             message = sign_result.get('message', '未知错误')
             if '已经签到' in message:
-                print(f"ℹ️ [账号{mask_account(customer_code)}] 今日已签到，当前金豆总数：{integral_voucher}")
+                print(f"ℹ️ [账号{mask_account(customer_code)}] 今日已签到")
                 return None  # 今日已签到，不返回消息
             else:
                 print(f"❌ [账号{mask_account(customer_code)}] 签到失败 - {message}")
@@ -105,7 +105,7 @@ def sign_in(access_token):
         # 处理签到结果
         if status and status > 0:
             if gain_num is not None and gain_num != 0:
-                print(f"✅ [账号{mask_account(customer_code)}] 获取{gain_num}个金豆，当前总数：{integral_voucher + gain_num}")
+                print(f"✅ [账号{mask_account(customer_code)}] 今日签到成功")
                 return f"✅ 账号({mask_account(customer_code)})：获取{gain_num}个金豆，当前总数：{integral_voucher + gain_num}"
             else:
                 # 第七天特殊处理
@@ -114,8 +114,8 @@ def sign_in(access_token):
                 seventh_result = seventh_response.json()
 
                 if seventh_result.get("success"):
-                    print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}")
-                    return f"🎉 账号({mask_account(customer_code)})：第七天签到成功，领取8个金豆，当前总数：{integral_voucher + 8}"
+                    print(f"🎉 [账号{mask_account(customer_code)}] 第七天签到成功")
+                    return f"🎉 账号({mask_account(customer_code)})：第七天签到成功，当前金豆总数：{integral_voucher + 8}"
                 else:
                     print(f"ℹ️ [账号{mask_account(customer_code)}] 第七天签到失败，无金豆获取")
                     return None
@@ -143,11 +143,11 @@ def main():
 
     # 检查配置是否为空
     if not AccessTokenList:
-        print("❌ 请在 GitHub Secrets 中设置 JLC_TOKENS")
+        print("❌ 请设置 TOKENS")
         return
         
     if not SendKeyList:
-        print("❌ 请在 GitHub Secrets 中设置 JLC_SEND_KEYS")
+        print("❌ 请设置 SENDKEYS")
         return
 
     # 确保长度一致
