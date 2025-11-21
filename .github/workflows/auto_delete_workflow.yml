@@ -1,0 +1,60 @@
+name: Cleanup Old Workflow Runs
+on:
+  # 每周日 00:00 自动运行
+  schedule:
+    - cron: '0 0 * * 0'
+  # 支持手动触发
+  workflow_dispatch:
+    inputs:
+      retain_days:
+        description: '保留多少天内的运行记录'
+        required: false
+        default: '3'
+        type: choice
+        options:
+          - '1'
+          - '3'
+          - '7'
+          - '14'
+
+jobs:
+  cleanup-runs:
+    name: Cleanup Old Workflow Runs
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate token permissions
+        run: |
+          if [ -z "${{ secrets.AUTODELETE_TOKEN }}" ]; then
+            echo "❌ AUTODELETE_TOKEN secret is not set"
+            exit 1
+          fi
+
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.AUTODELETE_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: ${{ github.event.inputs.retain_days || '3' }}
+          keep_minimum_runs: 5
+          keep_maximum_runs: 100
+          delete_workflow_pattern: 'all'
+
+      - name: Notify cleanup completion
+        if: success()
+        run: |
+          echo "✅ Workflow runs cleanup completed successfully"
+          echo "Repository: ${{ github.repository }}"
+          echo "Retain days: ${{ github.event.inputs.retain_days || '3' }}"
+          echo "Minimum runs kept: 5"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Workflow runs cleanup failed"
+          echo "Please check the AUTODELETE_TOKEN permissions and repository settings"
