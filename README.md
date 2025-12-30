@@ -1,6 +1,6 @@
-# 📬 嘉立创自动签到脚本
+# 📬 jlc自动签到脚本
 
-使用此 Python 脚本可以自动为多个嘉立创账号完成每日签到任务，并通过 [Server 酱](https://sct.ftqq.com/)推送签到结果至微信。
+使用此 Python 脚本可以自动为多个jlc账号完成每日签到任务，并通过 [Server 酱](https://sct.ftqq.com/)推送签到结果至微信。
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### 1️⃣ 获取 AccessToken
 
-1. 打开 [嘉立创官网](https://m.jlc.com)
+1. 打开 [jlc官网](https://m.jlc.com)
 2. 登录账号，按 `F12` 打开浏览器开发者工具
 3. 在「Network」中找到任意请求
 4. 查看请求头 Header 中的 `X-JLC-AccessToken`，复制其值
