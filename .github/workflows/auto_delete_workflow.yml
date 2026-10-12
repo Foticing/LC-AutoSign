@@ -30,19 +30,25 @@ jobs:
 
       - name: Validate token permissions
         run: |
-          if [ -z "${{ secrets.AUTODELETE_TOKEN }}" ]; then
-            echo "❌ AUTODELETE_TOKEN secret is not set"
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows")
+          if [ "$code" != "200" ]; then
+            echo "❌ Token 无效或权限不足，HTTP $code"
             exit 1
           fi
+          echo "✅ Token 有效，可访问 Actions API（HTTP 200）"
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Delete old workflow runs
         uses: Mattraks/delete-workflow-runs@v2
         with:
-          token: ${{ secrets.AUTODELETE_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           retain_days: ${{ github.event.inputs.retain_days || '3' }}
           keep_minimum_runs: 5
-          keep_maximum_runs: 100
           delete_workflow_pattern: 'all'
 
       - name: Notify cleanup completion
@@ -57,4 +63,4 @@ jobs:
         if: failure()
         run: |
           echo "❌ Workflow runs cleanup failed"
-          echo "Please check the AUTODELETE_TOKEN permissions and repository settings"
+          echo "Please check the workflow permissions (actions: write) and repository settings"
