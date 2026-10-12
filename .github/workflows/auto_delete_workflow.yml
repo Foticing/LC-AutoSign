@@ -49,7 +49,9 @@ jobs:
           repository: ${{ github.repository }}
           retain_days: ${{ github.event.inputs.retain_days || '3' }}
           keep_minimum_runs: 5
-          delete_workflow_pattern: 'all'
+          # 省略 delete_workflow_pattern = 清理所有 workflow 的运行记录。
+          # 切勿传 'all'：它只是普通字符串，按 workflow 名字/文件名做子串匹配，
+          # 匹配不到任何 workflow（日志表现为 Processing 0 workflow(s)）
 
       - name: Notify cleanup completion
         if: success()
